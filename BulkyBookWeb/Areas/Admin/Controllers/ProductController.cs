@@ -1,6 +1,8 @@
 ﻿using BulkyBook.DataAccess.Repository.IRepository;
 using BulkyBook.Models;
+using BulkyBook.Models.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace BulkyBookWeb.Areas.Admin.Controllers
 {
@@ -8,41 +10,79 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
     public class ProductController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public ProductController(IUnitOfWork unitOfWork)
+        public ProductController(IUnitOfWork unitOfWork,IWebHostEnvironment webHostEnvironment)
         {
             _unitOfWork = unitOfWork;
+            _webHostEnvironment = webHostEnvironment;
         }
         public IActionResult Index()
         {
-            IEnumerable<Product> cateforyList = _unitOfWork.ProductRepository.GetAll();
-            return View(cateforyList);
+            return View();
         }
-       
+
         public IActionResult Upsert(int? id)
         {
-            Product product = new();
+            ProductVM productVM = new()
+            {
+                Product = new(),
+                CategoryList = _unitOfWork.CategoryRepository.GetAll().Select(u => new SelectListItem
+                {
+                    Text = u.Name,
+                    Value = u.Id.ToString(),
+                }),
+                CoverTypeList = _unitOfWork.CoverTypeRepository.GetAll().Select(u => new SelectListItem
+                {
+                    Text = u.Name,
+                    Value = u.Id.ToString(),
+                })
+            };
+            //IEnumerable<SelectListItem> CategoryList = _unitOfWork.CategoryRepository.GetAll().Select(u => new SelectListItem
+            //{
+            //    Text = u.Name,
+            //    Value = u.Id.ToString(),
+            //});
+            //IEnumerable<SelectListItem> CoverTypeList = _unitOfWork.CoverTypeRepository.GetAll().Select(u => new SelectListItem
+            //{
+            //    Text = u.Name,
+            //    Value = u.Id.ToString(),
+            //});
+            //ViewBag.CategoryList = CategoryList;
+            //ViewData["CoverTypeList"] = CoverTypeList;
             if (id == null || id == 0)
             {
                 //create product
-                return View(product);
+                return View(productVM);
             }
-            else { 
+            else
+            {
                 //update Product
-                 product = _unitOfWork.ProductRepository.GetFirstOrDefault(c => c.Id == id);
+                //product = _unitOfWork.ProductRepository.GetFirstOrDefault(c => c.Id == id);
             }
-            return View(product);
+            return View(productVM);
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Edit(Product obj)
+        public IActionResult Upsert(ProductVM obj,IFormFile? file)
         {
             if (ModelState.IsValid)
             {
-                _unitOfWork.ProductRepository.Update(obj);
+                string wwRottPath = _webHostEnvironment.WebRootPath;
+                if (file != null)
+                {
+                    string fileName=Guid.NewGuid().ToString();
+                    var uploads=Path.Combine(wwRottPath,@"images\products");
+                    var extension=Path.GetExtension(file.FileName);
+                    using(var fileStreams=new FileStream(Path.Combine(uploads, fileName + extension), FileMode.Create))
+                    {
+                        file.CopyTo(fileStreams);
+                    }
+                    obj.Product.ImageUrl = @"\images\products\" + fileName + extension;
+                }
+                _unitOfWork.ProductRepository.Update(obj.Product);
                 _unitOfWork.Save();
                 TempData["success"] = "Product updated successfully!";
-
                 return RedirectToAction("Index");
             }
             return View(obj);
@@ -71,5 +111,14 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
 
             return RedirectToAction("Index");
         }
+
+        #region API calls
+        [HttpGet]
+        public IActionResult GetAll()
+        {
+            var productList=_unitOfWork.ProductRepository.GetAll();
+            return Json(new { data = productList });
+        }
+        #endregion
     }
 }
