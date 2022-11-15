@@ -58,9 +58,9 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
             else
             {
                 //update Product
-                //product = _unitOfWork.ProductRepository.GetFirstOrDefault(c => c.Id == id);
+                productVM.Product = _unitOfWork.ProductRepository.GetFirstOrDefault(c => c.Id == id);
+                return View(productVM);
             }
-            return View(productVM);
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -116,7 +116,7 @@ namespace BulkyBookWeb.Areas.Admin.Controllers
         [HttpGet]
         public IActionResult GetAll()
         {
-            var productList=_unitOfWork.ProductRepository.GetAll();
+            var productList=_unitOfWork.ProductRepository.GetAll(includeProperties:"Category,CoverType");
             return Json(new { data = productList });
         }
         #endregion
