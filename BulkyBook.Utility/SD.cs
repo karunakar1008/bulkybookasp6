@@ -7,5 +7,21 @@
         public const string Role_User_Comp = "Company";
         public const string Role_Admin = "Admin";
         public const string Role_Employee = "Employee";
+
+        //statuses of order
+        public const string StatusPending = "Pending";
+        public const string StatusApproved = "Approved";
+
+        //statuses of order by admin
+        public const string StatusInProcess = "Processing";
+        public const string StatusShipped = "Shipped";
+        public const string StatusCancelled = "Cancelled";
+        public const string StatusRefunded = "Refunded";
+
+        //statuses of payment
+        public const string PaymentStatusPending = "Pending";
+        public const string PaymentStatusApproved = "Approved";
+        public const string PaymentStatusDelayedPayment = "ApprovedForDelayedPayment";
+        public const string PaymentStatusRejected = "Rejected";
     }
 }
