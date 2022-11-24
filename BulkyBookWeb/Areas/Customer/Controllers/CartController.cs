@@ -71,16 +71,30 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
             var claimsIdentity = (ClaimsIdentity)User.Identity;
             var claim = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
             ShoppingCartVM.ListCart = _unitOfWork.ShoppingCartRepository.GetAll(u => u.ApplicationUserId == claim.Value, includeProperties: "Product");
+            ApplicationUser applicationUser = _unitOfWork.ApplicationUserRepository.GetFirstOrDefault(u => u.Id == claim.Value);
 
             //Save order
-            ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusPending;
-            ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
+            
             ShoppingCartVM.OrderHeader.OrderDate = DateTime.Now;
             ShoppingCartVM.OrderHeader.ApplicationUserId = claim.Value;
             foreach (var cart in ShoppingCartVM.ListCart)
             {
                 cart.Price = GetPriceBasedOnQuantity(cart.Count, cart.Product.Price, cart.Product.Price50, cart.Product.Price100);
                 ShoppingCartVM.OrderHeader.OrderTotal += (cart.Price * cart.Count);
+            }
+            if (applicationUser.CompanyId.GetValueOrDefault() == 0)
+            {
+                //strip proccessing for normal user
+                //Pay the amount using stripe account and save the sessionid and payment id
+
+                ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusPending;
+                ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
+            }
+            else
+            {
+                //Company user
+                ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusApproved;
+                ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusDelayedPayment;
             }
             _unitOfWork.OrderHeaderRepository.Add(ShoppingCartVM.OrderHeader);
             _unitOfWork.Save();
@@ -98,9 +112,34 @@ namespace BulkyBookWeb.Areas.Customer.Controllers
                 _unitOfWork.OrderDetailRepository.Add(orderDetail);
                 _unitOfWork.Save();
             }
-            _unitOfWork.ShoppingCartRepository.RemoveRange(ShoppingCartVM.ListCart);
+            if (applicationUser.CompanyId.GetValueOrDefault() == 0)
+            {
+                //strip proccessing for normal user
+                //Pay the amount using stripe account and save the sessionid and payment id
+                //In stripe settings we define the rediect url on payment success
+                return RedirectToAction("OrderConfirmation", "Cart", new { id = ShoppingCartVM.OrderHeader.Id });
+            }
+            else
+            {
+                //Company user
+                return RedirectToAction("OrderConfirmation", "Cart", new { id = ShoppingCartVM.OrderHeader.Id });
+            }
+        }
+        public IActionResult OrderConfirmation(int id)
+        {
+            OrderHeader orderHeader = _unitOfWork.OrderHeaderRepository.GetFirstOrDefault(u => u.Id == id);
+            if (orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
+            {
+                //check the strip payment status as paid and then update status
+                _unitOfWork.OrderHeaderRepository.UpdateStatus(id, SD.StatusApproved, SD.PaymentStatusApproved);
+                _unitOfWork.Save();
+            }
+          
+            List<ShoppingCart> shoppingCarts = _unitOfWork.ShoppingCartRepository.GetAll(u => u.ApplicationUserId == orderHeader.ApplicationUserId).ToList();
+            _unitOfWork.ShoppingCartRepository.RemoveRange(shoppingCarts);
             _unitOfWork.Save();
-            return RedirectToAction("Index", "Home");
+            return View(id);
+
         }
         private double GetPriceBasedOnQuantity(double quantity, double price, double price50, double price100)
         {
