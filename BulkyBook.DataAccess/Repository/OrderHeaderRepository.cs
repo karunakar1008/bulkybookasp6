@@ -23,6 +23,7 @@ namespace BulkyBook.DataAccess.Repository
             if(orderFromDb != null)
             {
                 orderFromDb.OrderStatus = orderStatus;
+                orderFromDb.PaymentDate = DateTime.Now;
                 if(paymentStatus != null)
                     orderFromDb.PaymentStatus = paymentStatus;
             }

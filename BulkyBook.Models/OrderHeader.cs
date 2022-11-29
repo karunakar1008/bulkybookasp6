@@ -20,7 +20,9 @@ namespace BulkyBook.Models
         public string? PaymentStatus { get; set; }
         public string? TrackingNumber { get; set; }
         public string? Carrier { get; set; }
+        [DisplayFormat(DataFormatString = "{0:dd'/'MM'/'yyyy}", ApplyFormatInEditMode = true)]
         public DateTime PaymentDate { get; set; }
+        //[DisplayFormat(DataFormatString = "{0:dd'/'MM'/'yyyy}", ApplyFormatInEditMode = true)]
         public DateTime PaymentDueDate { get; set; }
         public string? SessionId { get; set; }
         public string? PaymentIntentId { get; set; }

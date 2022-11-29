@@ -18,6 +18,7 @@ namespace BulkyBook.DataAccess.Repository
             //_db.Products.Include(u => u.Category).Include(u => u.CoverType);
             //_db.ShoppingCarts.Include(u => u.Product);
             dbSet=_db.Set<T>();
+            //_db.ShoppingCarts.AsNoTracking().Where()
         }
         public void Add(T entity)
         {
@@ -42,9 +43,17 @@ namespace BulkyBook.DataAccess.Repository
             return query.ToList();
         }
 
-        public T GetFirstOrDefault(System.Linq.Expressions.Expression<Func<T, bool>> filter, string? includeProperties = null)
+        public T GetFirstOrDefault(System.Linq.Expressions.Expression<Func<T, bool>> filter, string? includeProperties = null,bool tracked=true)
         {
-            IQueryable<T> query = dbSet;
+            IQueryable<T> query;
+            if (tracked)
+            {
+                query=dbSet;
+            }
+            else
+            {
+                query = dbSet.AsNoTracking();
+            }
             query= query.Where(filter);
             if (includeProperties != null)
             {
